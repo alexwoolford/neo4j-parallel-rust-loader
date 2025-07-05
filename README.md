@@ -23,9 +23,10 @@ The application reads the Parquet file and creates nodes with the given label in
 
 ## Loading relationships
 
-The crate also includes a helper to create relationships from Parquet files. Each
-row should specify the identifiers of the start and end nodes and any additional
-relationship properties.
+The crate also includes a helper to create relationships from Parquet files.
+Rows are internally grouped so that parallel transactions never touch the same
+nodes, which minimizes write locks. Each row should specify the identifiers of
+the start and end nodes and any additional relationship properties.
 
 ```rust
 use neo4j_parallel_rust_loader::{connect, load_parquet_relationships_parallel, Neo4jConfig};
@@ -42,3 +43,7 @@ load_parquet_relationships_parallel(
     4,
 ).await?;
 ```
+
+Relationships are colored internally so that each concurrently executed batch
+touches disjoint nodes, greatly reducing lock contention when creating many
+edges at once.

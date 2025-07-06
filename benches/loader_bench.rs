@@ -33,7 +33,10 @@ fn bench_nodes(c: &mut Criterion) {
     dotenvy::dotenv().ok();
     let cfg = match Neo4jConfig::from_env() {
         Ok(c) => c,
-        Err(_) => return,
+        Err(e) => {
+            eprintln!("skipping benchmark: {e}");
+            return;
+        }
     };
     let rt = tokio::runtime::Runtime::new().unwrap();
     let graph = rt.block_on(connect(&cfg)).expect("connect");

@@ -54,3 +54,16 @@ load_parquet_relationships_parallel(
 Relationships are colored internally so that each concurrently executed batch
 touches disjoint nodes, greatly reducing lock contention when creating many
 edges at once.
+
+## Benchmarks
+
+A Criterion benchmark is included in `benches/loader_bench.rs`. It requires the same
+Neo4j environment variables as the example loader. If these variables are not set,
+the benchmark will be skipped.
+
+Run the benchmark with:
+
+```bash
+cargo bench --bench loader_bench
+```
+

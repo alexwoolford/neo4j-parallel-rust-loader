@@ -4,7 +4,11 @@ pub mod loader;
 
 pub use config::Neo4jConfig;
 pub use neo4j::connect;
-pub use loader::{load_parquet_parallel, load_parquet_relationships_parallel};
+pub use loader::{
+    load_parquet_nodes_parallel,
+    load_parquet_parallel,
+    load_parquet_relationships_parallel,
+};
 
 #[cfg(test)]
 mod tests {

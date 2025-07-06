@@ -21,6 +21,13 @@ cargo run -- <parquet-file> <node-label> [concurrency]
 
 The application reads the Parquet file and creates nodes with the given label in the database. The optional concurrency argument controls how many rows are inserted in parallel (default is 4).
 
+```rust
+use neo4j_parallel_rust_loader::{connect, load_parquet_nodes_parallel, Neo4jConfig};
+
+let graph = connect(&cfg).await?;
+load_parquet_nodes_parallel(graph, "nodes.parquet", "Person", 8).await?;
+```
+
 ## Loading relationships
 
 The crate also includes a helper to create relationships from Parquet files.

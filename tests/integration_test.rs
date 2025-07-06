@@ -1,5 +1,5 @@
 use neo4j_parallel_rust_loader::{
-    load_parquet_parallel,
+    load_parquet_nodes_parallel,
     load_parquet_relationships_parallel,
     connect,
     Neo4jConfig,
@@ -95,7 +95,7 @@ async fn test_loader() {
     };
     let parquet = "tests/data/sample.parquet";
     create_parquet(parquet).unwrap();
-    load_parquet_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
+    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
     let mut result = graph
         .execute(neo4rs::query("MATCH (n:Person) RETURN count(n) as c"))
         .await
@@ -126,7 +126,7 @@ async fn test_relationship_loader() {
     };
     let parquet = "tests/data/sample.parquet";
     create_parquet(parquet).unwrap();
-    load_parquet_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
+    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
     let rel_parquet = "tests/data/rels.parquet";
     create_rel_parquet(rel_parquet).unwrap();
     load_parquet_relationships_parallel(

@@ -10,7 +10,7 @@ use tokio::sync::Semaphore;
 
 /// Load Parquet data into Neo4j in parallel.
 /// Each row in the Parquet file is mapped to properties of a node with the given label.
-pub async fn load_parquet_parallel<P: AsRef<Path>>(
+pub async fn load_parquet_nodes_parallel<P: AsRef<Path>>(
     graph: Graph,
     path: P,
     label: &str,
@@ -54,6 +54,16 @@ pub async fn load_parquet_parallel<P: AsRef<Path>>(
         res??;
     }
     Ok(())
+}
+
+/// Alias kept for backwards compatibility
+pub async fn load_parquet_parallel<P: AsRef<Path>>(
+    graph: Graph,
+    path: P,
+    label: &str,
+    concurrency: usize,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    load_parquet_nodes_parallel(graph, path, label, concurrency).await
 }
 
 /// Load relationships from a Parquet file in parallel.

@@ -1,6 +1,6 @@
 use neo4j_parallel_rust_loader::{
     connect,
-    load_parquet_parallel,
+    load_parquet_nodes_parallel,
     load_parquet_relationships_parallel,
     Neo4jConfig,
 };
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .unwrap_or_else(|| "4".to_string())
             .parse()
             .unwrap_or(4);
-        load_parquet_parallel(graph, path, &label, concurrency).await?;
+        load_parquet_nodes_parallel(graph, path, &label, concurrency).await?;
     } else if mode == "rels" {
         let path = match args.next() {
             Some(p) => p,

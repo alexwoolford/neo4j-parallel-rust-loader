@@ -13,3 +13,6 @@ arrow = "55.2"
 
 [dev-dependencies]
 
+criterion = "0.5"
+rand = "0.8"
+

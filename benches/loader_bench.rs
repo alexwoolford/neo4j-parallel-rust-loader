@@ -71,5 +71,13 @@ fn bench_nodes(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_nodes);
+use std::time::Duration;
+
+criterion_group! {
+    name = benches;
+    config = Criterion::default()
+        .sample_size(10)
+        .measurement_time(Duration::from_secs(5));
+    targets = bench_nodes
+}
 criterion_main!(benches);

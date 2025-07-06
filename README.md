@@ -54,3 +54,14 @@ load_parquet_relationships_parallel(
 Relationships are colored internally so that each concurrently executed batch
 touches disjoint nodes, greatly reducing lock contention when creating many
 edges at once.
+
+## Running benchmarks
+
+To execute the Criterion benchmarks, ensure the same Neo4j environment variables used for the loader example are set. Then run:
+
+```bash
+cargo bench
+```
+
+The benchmark connects to your database and loads a small Parquet file. When the variables are not present, the benchmark is skipped.
+

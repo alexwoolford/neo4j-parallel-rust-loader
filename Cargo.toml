@@ -10,6 +10,7 @@ dotenvy = "0.15"
 futures = "0.3"
 parquet = { version = "55.2", features = ["arrow", "json"] }
 arrow = "55.2"
+rustls = { version = "0.23", features = ["ring", "tls12"], default-features = false }
 
 [dev-dependencies]
 

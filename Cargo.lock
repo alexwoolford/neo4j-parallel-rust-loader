@@ -1400,6 +1400,7 @@ dependencies = [
  "neo4rs",
  "parquet",
  "rand",
+ "rustls",
  "tokio",
 ]
 

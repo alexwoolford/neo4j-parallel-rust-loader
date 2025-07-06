@@ -16,3 +16,7 @@ arrow = "55.2"
 # Enable `async_tokio` so Criterion supports `to_async` for Tokio benchmarks
 criterion = { version = "0.5", features = ["async_tokio"] }
 rand = "0.8"
+
+[[bench]]
+name = "loader_bench"
+harness = false

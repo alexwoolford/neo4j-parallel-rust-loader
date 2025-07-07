@@ -50,7 +50,6 @@ fn create_rels_parquet<P: AsRef<Path>>(
     let batch = RecordBatch::try_new(
         schema.clone(),
         vec![
-
             Arc::new(Int64Array::from(start)),
             Arc::new(Int64Array::from(end)),
             Arc::new(Int64Array::from(since)),
@@ -100,8 +99,10 @@ fn bench_nodes(c: &mut Criterion) {
                 "CONNECTED",
                 "Bench",
                 "start_id",
+                "id",
                 "Bench",
                 "end_id",
+                "id",
                 8,
             )
             .await

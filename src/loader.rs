@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use futures::{stream::FuturesUnordered, StreamExt};
-use neo4rs::{query, BoltType, Graph};
+use futures::{StreamExt, stream::FuturesUnordered};
+use neo4rs::{BoltType, Graph, query};
 use parquet::file::reader::{FileReader, SerializedFileReader};
 use parquet::record::Row;
 use tokio::sync::Semaphore;
@@ -18,16 +18,18 @@ pub async fn load_parquet_nodes_parallel<P: AsRef<Path>>(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path_buf = path.as_ref().to_path_buf();
     // Read all rows from parquet in a blocking task
-    let rows: Vec<Row> = tokio::task::spawn_blocking(move || -> Result<_, Box<dyn std::error::Error + Send + Sync>> {
-        let file = std::fs::File::open(path_buf)?;
-        let reader = SerializedFileReader::new(file)?;
-        let iter = reader.get_row_iter(None)?;
-        let mut rows = Vec::new();
-        for row in iter {
-            rows.push(row?);
-        }
-        Ok(rows)
-    })
+    let rows: Vec<Row> = tokio::task::spawn_blocking(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync>> {
+            let file = std::fs::File::open(path_buf)?;
+            let reader = SerializedFileReader::new(file)?;
+            let iter = reader.get_row_iter(None)?;
+            let mut rows = Vec::new();
+            for row in iter {
+                rows.push(row?);
+            }
+            Ok(rows)
+        },
+    )
     .await??;
 
     let semaphore = Arc::new(Semaphore::new(concurrency));
@@ -70,30 +72,35 @@ pub async fn load_parquet_parallel<P: AsRef<Path>>(
 ///
 /// Each row must contain identifiers for the start and end nodes as well as any
 /// relationship properties. The `start_id_col` and `end_id_col` parameters
-/// specify the column names used to match existing nodes. Nodes are matched by
-/// label and property value.
+/// specify the column names used to read the identifiers from the Parquet file,
+/// while `start_id_prop` and `end_id_prop` specify the property names used to
+/// match existing nodes. Nodes are matched by label and property value.
 pub async fn load_parquet_relationships_parallel<P: AsRef<Path>>(
     graph: Graph,
     path: P,
     rel_type: &str,
     start_label: &str,
     start_id_col: &str,
+    start_id_prop: &str,
     end_label: &str,
     end_id_col: &str,
+    end_id_prop: &str,
     concurrency: usize,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let path_buf = path.as_ref().to_path_buf();
     // Read all rows from parquet in a blocking task
-    let rows: Vec<Row> = tokio::task::spawn_blocking(move || -> Result<_, Box<dyn std::error::Error + Send + Sync>> {
-        let file = std::fs::File::open(path_buf)?;
-        let reader = SerializedFileReader::new(file)?;
-        let iter = reader.get_row_iter(None)?;
-        let mut rows = Vec::new();
-        for row in iter {
-            rows.push(row?);
-        }
-        Ok(rows)
-    })
+    let rows: Vec<Row> = tokio::task::spawn_blocking(
+        move || -> Result<_, Box<dyn std::error::Error + Send + Sync>> {
+            let file = std::fs::File::open(path_buf)?;
+            let reader = SerializedFileReader::new(file)?;
+            let iter = reader.get_row_iter(None)?;
+            let mut rows = Vec::new();
+            for row in iter {
+                rows.push(row?);
+            }
+            Ok(rows)
+        },
+    )
     .await??;
 
     // ------------------------------------------------------------------
@@ -145,7 +152,10 @@ pub async fn load_parquet_relationships_parallel<P: AsRef<Path>>(
             let mut used = std::collections::HashSet::new();
             used.insert(start_val.clone());
             used.insert(end_val.clone());
-            batches.push(ColorBatch { rows: vec![row.clone()], used });
+            batches.push(ColorBatch {
+                rows: vec![row.clone()],
+                used,
+            });
         }
     }
 
@@ -160,7 +170,9 @@ pub async fn load_parquet_relationships_parallel<P: AsRef<Path>>(
             let start_label = start_label.to_owned();
             let end_label = end_label.to_owned();
             let start_id_col = start_id_col.to_owned();
+            let start_id_prop = start_id_prop.to_owned();
             let end_id_col = end_id_col.to_owned();
+            let end_id_prop = end_id_prop.to_owned();
             let permit = semaphore.clone().acquire_owned().await?;
             tasks.push(tokio::spawn(async move {
                 let _permit = permit;
@@ -190,14 +202,17 @@ pub async fn load_parquet_relationships_parallel<P: AsRef<Path>>(
                         format!("missing end id column: {}", end_id_col),
                     )
                 })?;
-                let q = query(format!(
-                    "MATCH (a:{start_label} {{{start_id_col}: $start}}) \
-                     MATCH (b:{end_label} {{{end_id_col}: $end}}) \
+                let q = query(
+                    format!(
+                        "MATCH (a:{start_label} {{{start_id_prop}: $start}}) \
+                     MATCH (b:{end_label} {{{end_id_prop}: $end}}) \
                      CREATE (a)-[r:{rel_type} $props]->(b)"
-                ).as_str())
-                    .param("start", start_val)
-                    .param("end", end_val)
-                    .param("props", props);
+                    )
+                    .as_str(),
+                )
+                .param("start", start_val)
+                .param("end", end_val)
+                .param("props", props);
                 graph.run(q).await
             }));
         }

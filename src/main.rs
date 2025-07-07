@@ -1,8 +1,5 @@
 use neo4j_parallel_rust_loader::{
-    connect,
-    load_parquet_nodes_parallel,
-    load_parquet_relationships_parallel,
-    Neo4jConfig,
+    Neo4jConfig, connect, load_parquet_nodes_parallel, load_parquet_relationships_parallel,
 };
 use std::env;
 
@@ -47,42 +44,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let path = match args.next() {
             Some(p) => p,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
         let rel_type = match args.next() {
             Some(l) => l,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
         let start_label = match args.next() {
             Some(l) => l,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
         let start_col = match args.next() {
             Some(c) => c,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
         let end_label = match args.next() {
             Some(l) => l,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
         let end_col = match args.next() {
             Some(c) => c,
             None => {
-                eprintln!("Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]");
+                eprintln!(
+                    "Usage: cargo run -- rels <path> <rel-type> <start-label> <start-col> <end-label> <end-col> [concurrency]"
+                );
                 std::process::exit(1);
             }
         };
@@ -97,7 +106,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             &rel_type,
             &start_label,
             &start_col,
+            &start_col,
             &end_label,
+            &end_col,
             &end_col,
             concurrency,
         )

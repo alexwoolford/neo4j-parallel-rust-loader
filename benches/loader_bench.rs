@@ -50,6 +50,7 @@ fn create_rels_parquet<P: AsRef<Path>>(
     let batch = RecordBatch::try_new(
         schema.clone(),
         vec![
+
             Arc::new(Int64Array::from(start)),
             Arc::new(Int64Array::from(end)),
             Arc::new(Int64Array::from(since)),

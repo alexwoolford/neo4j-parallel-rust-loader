@@ -1,28 +1,19 @@
-use neo4j_parallel_rust_loader::{
-    load_parquet_nodes_parallel,
-    load_parquet_relationships_parallel,
-    connect,
-    Neo4jConfig,
-};
-use dotenvy::dotenv;
-use std::sync::Arc;
-use arrow::array::{Int64Array, StringArray};
+use arrow::array::Int64Array;
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
+use dotenvy::dotenv;
+use neo4j_parallel_rust_loader::{
+    Neo4jConfig, connect, load_parquet_nodes_parallel, load_parquet_relationships_parallel,
+};
 use parquet::arrow::ArrowWriter;
 use std::fs::File;
+use std::sync::Arc;
 
 fn create_parquet(path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("name", DataType::Utf8, false),
-        Field::new("age", DataType::Int64, false),
-    ]));
+    let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));
     let batch = RecordBatch::try_new(
         schema.clone(),
-        vec![
-            Arc::new(StringArray::from(vec!["Alice", "Bob", "Carol"])),
-            Arc::new(Int64Array::from(vec![30, 25, 40])),
-        ],
+        vec![Arc::new(Int64Array::from(vec![1, 2, 3]))],
     )?;
     let file = File::create(path)?;
     let mut writer = ArrowWriter::try_new(file, schema, None)?;
@@ -33,15 +24,15 @@ fn create_parquet(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 fn create_rel_parquet(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let schema = Arc::new(Schema::new(vec![
-        Field::new("start_name", DataType::Utf8, false),
-        Field::new("end_name", DataType::Utf8, false),
+        Field::new("start_id", DataType::Int64, false),
+        Field::new("end_id", DataType::Int64, false),
         Field::new("since", DataType::Int64, false),
     ]));
     let batch = RecordBatch::try_new(
         schema.clone(),
         vec![
-            Arc::new(StringArray::from(vec!["Alice", "Bob"])),
-            Arc::new(StringArray::from(vec!["Bob", "Carol"])),
+            Arc::new(Int64Array::from(vec![1, 2])),
+            Arc::new(Int64Array::from(vec![2, 3])),
             Arc::new(Int64Array::from(vec![2020, 2021])),
         ],
     )?;
@@ -95,7 +86,9 @@ async fn test_loader() {
     };
     let parquet = "tests/data/sample.parquet";
     create_parquet(parquet).unwrap();
-    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
+    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4)
+        .await
+        .unwrap();
     let mut result = graph
         .execute(neo4rs::query("MATCH (n:Person) RETURN count(n) as c"))
         .await
@@ -126,7 +119,9 @@ async fn test_relationship_loader() {
     };
     let parquet = "tests/data/sample.parquet";
     create_parquet(parquet).unwrap();
-    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4).await.unwrap();
+    load_parquet_nodes_parallel(graph.clone(), parquet, "Person", 4)
+        .await
+        .unwrap();
     let rel_parquet = "tests/data/rels.parquet";
     create_rel_parquet(rel_parquet).unwrap();
     load_parquet_relationships_parallel(
@@ -134,9 +129,11 @@ async fn test_relationship_loader() {
         rel_parquet,
         "KNOWS",
         "Person",
-        "start_name",
+        "start_id",
+        "id",
         "Person",
-        "end_name",
+        "end_id",
+        "id",
         4,
     )
     .await

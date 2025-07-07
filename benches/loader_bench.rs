@@ -2,7 +2,9 @@ use arrow::array::{Int64Array, StringArray};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use criterion::{Criterion, criterion_group, criterion_main};
-use neo4j_parallel_rust_loader::{Neo4jConfig, connect, load_parquet_nodes_parallel};
+use neo4j_parallel_rust_loader::{
+    Neo4jConfig, connect, load_parquet_nodes_parallel, load_parquet_relationships_parallel,
+};
 use neo4rs::query;
 use parquet::arrow::ArrowWriter;
 use std::fs::File;
@@ -24,6 +26,33 @@ fn create_nodes_parquet<P: AsRef<Path>>(
         vec![
             Arc::new(StringArray::from(names)),
             Arc::new(Int64Array::from(values)),
+        ],
+    )?;
+    let file = File::create(path)?;
+    let mut writer = ArrowWriter::try_new(file, schema, None)?;
+    writer.write(&batch)?;
+    writer.close()?;
+    Ok(())
+}
+
+fn create_rels_parquet<P: AsRef<Path>>(
+    path: P,
+    rows: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("start_name", DataType::Utf8, false),
+        Field::new("end_name", DataType::Utf8, false),
+        Field::new("since", DataType::Int64, false),
+    ]));
+    let start: Vec<String> = (0..rows).map(|i| format!("N{}", i)).collect();
+    let end: Vec<String> = (0..rows).map(|i| format!("N{}", (i + 1) % rows)).collect();
+    let since: Vec<i64> = (0..rows as i64).collect();
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(StringArray::from(start)),
+            Arc::new(StringArray::from(end)),
+            Arc::new(Int64Array::from(since)),
         ],
     )?;
     let file = File::create(path)?;
@@ -55,18 +84,33 @@ fn bench_nodes(c: &mut Criterion) {
             .ok();
     });
 
-    c.bench_function("load 1000 nodes", |b| {
+    c.bench_function("load 1000 nodes with relationships", |b| {
         b.to_async(&rt).iter(|| async {
-            let parquet = "bench_nodes.parquet";
-            create_nodes_parquet(parquet, 1000).unwrap();
-            load_parquet_nodes_parallel(graph.clone(), parquet, "Bench", 8)
+            let nodes_parquet = "bench_nodes.parquet";
+            let rels_parquet = "bench_rels.parquet";
+            create_nodes_parquet(nodes_parquet, 1000).unwrap();
+            create_rels_parquet(rels_parquet, 1000).unwrap();
+            load_parquet_nodes_parallel(graph.clone(), nodes_parquet, "Bench", 8)
                 .await
                 .unwrap();
+            load_parquet_relationships_parallel(
+                graph.clone(),
+                rels_parquet,
+                "CONNECTED",
+                "Bench",
+                "start_name",
+                "Bench",
+                "end_name",
+                8,
+            )
+            .await
+            .unwrap();
             graph
                 .run(query("MATCH (n:Bench) DETACH DELETE n"))
                 .await
                 .ok();
-            std::fs::remove_file(parquet).ok();
+            std::fs::remove_file(nodes_parquet).ok();
+            std::fs::remove_file(rels_parquet).ok();
         });
     });
 }
